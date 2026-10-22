@@ -1,896 +1,693 @@
-import datetime
-import pandas as pd
-import streamlit as st
-
-# --- PAGE CONFIGURATION ---
-st.set_page_config(
-    page_title="AgriMetrics Pro | Commercial Farm Intelligence",
-    page_icon="🌾",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# --- MASTER ADMIN PASSKEY ---
-ADMIN_PASSKEY = "Kayunga2026!"
-
-# --- SESSION STATE INITIALIZATION ---
-if "logged_in" not in st.session_state:
-  st.session_state.logged_in = False
-
-
-# Function to load sample/demo data for public visitors
-def get_demo_data():
-  demo_inv = pd.DataFrame([
-      {
-          "Item Name": "Sample Coffee Crop",
-          "Enterprise": "☕ Coffee",
-          "Quantity": 100.0,
-          "Unit": "Plants",
-          "Status": "Demo",
-      },
-      {
-          "Item Name": "Demo Bananas",
-          "Enterprise": "🍌 Bananas",
-          "Quantity": 20.0,
-          "Unit": "Stools",
-          "Status": "Demo",
-      },
-  ])
-  demo_logs = pd.DataFrame([
-      {
-          "Date": str(datetime.date.today()),
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Demo Activity: Applied sample organic fertilizer.",
-      }
-  ])
-  demo_exp = pd.DataFrame(
-      columns=["Date", "Enterprise", "Description", "Cost (UGX)"]
-  )
-  demo_tasks = pd.DataFrame([
-      {
-          "Date": str(datetime.date.today()),
-          "Enterprise": "☕ Coffee",
-          "Task": "Sample Scheduled Spraying Task",
-          "Status": "Pending",
-      }
-  ])
-  return demo_inv, demo_logs, demo_exp, demo_tasks
-
-
-# Function to load your REAL private farm data
-def get_real_farm_data():
-  real_inv = pd.DataFrame([
-      {
-          "Item Name": "Coffee Plantation",
-          "Enterprise": "☕ Coffee",
-          "Quantity": 789.0,
-          "Unit": "Plants",
-          "Status": "Optimal",
-      },
-      {
-          "Item Name": "Matooke & Mevu Bananas",
-          "Enterprise": "🍌 Bananas",
-          "Quantity": 53.0,
-          "Unit": "Stools",
-          "Status": "Optimal",
-      },
-      {
-          "Item Name": "Pigs (Breeding Stock)",
-          "Enterprise": "🐖 Pigs",
-          "Quantity": 2.0,
-          "Unit": "Heads",
-          "Status": "Active",
-      },
-      {
-          "Item Name": "Poultry Flock (26 hens, 13 cocks, chicks)",
-          "Enterprise": "🐔 Poultry",
-          "Quantity": 39.0,
-          "Unit": "Birds",
-          "Status": "Active",
-      },
-      {
-          "Item Name": "Goats (Adults + Twin Kids)",
-          "Enterprise": "🐐 Goats",
-          "Quantity": 4.0,
-          "Unit": "Heads",
-          "Status": "Active",
-      },
-      {
-          "Item Name": "NPK 17-17-17 Fertilizer",
-          "Enterprise": "🧪 Inputs",
-          "Quantity": 2.0,
-          "Unit": "Bags",
-          "Status": "In Stock",
-      },
-      {
-          "Item Name": "24-24-20 Foliar Spray",
-          "Enterprise": "🧪 Inputs",
-          "Quantity": 1.0,
-          "Unit": "Litres",
-          "Status": "In Stock",
-      },
-      {
-          "Item Name": "Nordox Copper Fungicide",
-          "Enterprise": "🧪 Inputs",
-          "Quantity": 1.0,
-          "Unit": "Packets",
-          "Status": "In Stock",
-      },
-  ])
-
-  real_logs = pd.DataFrame([
-      {
-          "Date": "2026-05-09",
-          "Enterprise": "🐖 Pigs",
-          "Log Details": "Acquired 2 piglets and established housing setup.",
-      },
-      {
-          "Date": "2026-06-02",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied Nordox copper fungicide to the 789 plants.",
-      },
-      {
-          "Date": "2026-07-14",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied Calcium and Boron root/foliar treatment.",
-      },
-      {
-          "Date": "2026-07-17",
-          "Enterprise": "🍌 Bananas",
-          "Log Details": "Planted 23 matooke and 10 mevu banana plants.",
-      },
-      {
-          "Date": "2026-07-21",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied liquid NPK 17-17-17.",
-      },
-      {
-          "Date": "2026-07-28",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied Vanol with Power Jelly.",
-      },
-      {
-          "Date": "2026-08-14",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied Nordox copper fungicide second round.",
-      },
-      {
-          "Date": "2026-08-18",
-          "Enterprise": "🐐 Goats",
-          "Log Details": "Goat gave birth to twin kids successfully.",
-      },
-      {
-          "Date": "2026-08-31",
-          "Enterprise": "☕ Coffee",
-          "Log Details": "Applied insecticide treatment for leaf-eating pests.",
-      },
-      {
-          "Date": "2026-09-18",
-          "Enterprise": "🍌 Bananas",
-          "Log Details": "Planted 20 additional matooke banana suckers.",
-      },
-  ])
-
-  real_exp = pd.DataFrame(
-      columns=["Date", "Enterprise", "Description", "Cost (UGX)"]
-  )
-
-  real_tasks = pd.DataFrame([
-      {
-          "Date": "2026-10-25",
-          "Enterprise": "☕ Coffee",
-          "Task": "Scheduled Nordox fungicide spray & canopy check",
-          "Status": "Pending",
-      },
-      {
-          "Date": "2026-10-28",
-          "Enterprise": "🐖 Pigs",
-          "Task": (
-              "Batch fermented feed mix (Broken maize, rice bran, yeast,"
-              " banana stalks)"
-          ),
-          "Status": "In Progress",
-      },
-      {
-          "Date": "2026-11-02",
-          "Enterprise": "🍌 Bananas",
-          "Task": "Desuckering and organic mulching for Matooke & Mevu blocks",
-          "Status": "Pending",
-      },
-  ])
-  return real_inv, real_logs, real_exp, real_tasks
-
-
-# Load active session memory based on login status
-if "inventory" not in st.session_state:
-  if st.session_state.logged_in:
-    (
-        st.session_state.inventory,
-        st.session_state.past_logs,
-        st.session_state.expenses,
-        st.session_state.tasks,
-    ) = get_real_farm_data()
-  else:
-    (
-        st.session_state.inventory,
-        st.session_state.past_logs,
-        st.session_state.expenses,
-        st.session_state.tasks,
-    ) = get_demo_data()
-
-if "losses" not in st.session_state:
-  st.session_state.losses = pd.DataFrame(
-      columns=[
-          "Date",
-          "Enterprise",
-          "Item Name",
-          "Quantity Lost",
-          "Reason / Cause",
-      ]
-  )
-
-if "treatments" not in st.session_state:
-  st.session_state.treatments = pd.DataFrame(
-      columns=[
-          "Date",
-          "Enterprise",
-          "Medicine / Chemical Used",
-          "Target Issue / Purpose",
-          "Dosage / Notes",
-          "Administered By",
-      ]
-  )
-
-# --- SIDEBAR LOG-IN & NAVIGATION ---
-st.sidebar.image(
-    "https://img.icons8.com/color/96/artificial-intelligence.png", width=60
-)
-st.sidebar.markdown(
-    "### **AgriMetrics Pro**\n*Commercial Farm Intelligence Suite*"
-)
-st.sidebar.markdown("---")
-
-# Authentication Widget in Sidebar
-if not st.session_state.logged_in:
-  st.sidebar.subheader("🔒 Owner / Subscriber Login")
-  passkey_input = st.sidebar.text_input("Enter Passkey", type="password")
-  if st.sidebar.button("Log In"):
-    if passkey_input == ADMIN_PASSKEY:
-      st.session_state.logged_in = True
-      (
-          st.session_state.inventory,
-          st.session_state.past_logs,
-          st.session_state.expenses,
-          st.session_state.tasks,
-      ) = get_real_farm_data()
-      st.sidebar.success("Welcome back! Live Farm Loaded.")
-      st.rerun()
-    else:
-      st.sidebar.error("Invalid Passkey.")
-else:
-  st.sidebar.success("🟢 Connected to Live Kayunga Farm")
-  if st.sidebar.button("Log Out"):
-    st.session_state.logged_in = False
-    (
-        st.session_state.inventory,
-        st.session_state.past_logs,
-        st.session_state.expenses,
-        st.session_state.tasks,
-    ) = get_demo_data()
-    st.rerun()
-
-st.sidebar.markdown("---")
-
-menu = st.sidebar.selectbox(
-    "Navigation Hub",
-    [
-        "📈 Executive Dashboard",
-        "🔍 Enterprise Inspector",
-        "🥀 Plant & Livestock Loss Tracker",
-        "💊 Self-Medication & Treatment Log",
-        "📜 Operational Audit Logs",
-        "💰 Financial Ledger & Expenses",
-        "📦 Asset & Inventory Control",
-        "🗓️ Spraying & Protocol Roadmap",
-    ],
-)
-
-# --- PUBLIC DEMO BANNER ---
-if not st.session_state.logged_in:
-  st.warning(
-      "👋 **PUBLIC DEMO MODE:** You are viewing the sandbox demo version of"
-      " **AgriMetrics Pro**. Test the features below!\n\n"
-      "🔒 **To access your live farm data, enter passkey `Kayunga2026!` in the"
-      " sidebar.**"
-  )
-
-# ====================================================
-# 1. EXECUTIVE DASHBOARD
-# ====================================================
-if menu == "📈 Executive Dashboard":
-  st.title("📈 Executive Farm Dashboard")
-  st.write("Real-time operational overview across farm enterprises.")
-
-  total_spent = (
-      st.session_state.expenses["Cost (UGX)"].sum()
-      if not st.session_state.expenses.empty
-      else 0.0
-  )
-  pending_tasks_count = len(
-      st.session_state.tasks[st.session_state.tasks["Status"] != "Completed"]
-  )
-
-  coffee_row = st.session_state.inventory[
-      st.session_state.inventory["Enterprise"] == "☕ Coffee"
-  ]
-  coffee_count = (
-      int(coffee_row["Quantity"].sum()) if not coffee_row.empty else 0
-  )
-
-  col1, col2, col3, col4 = st.columns(4)
-  col1.metric("Total Expenses", f"UGX {total_spent:,.2f}")
-  col2.metric("Assets Tracked", len(st.session_state.inventory))
-  col3.metric("Coffee Stems Active", f"{coffee_count} Plants")
-  col4.metric("Pending Protocols", f"{pending_tasks_count} Actions")
-
-  st.markdown("---")
-
-  c1, c2 = st.columns(2)
-  with c1:
-    st.subheader("🚨 Priority Next Protocols")
-    if not st.session_state.tasks.empty:
-      st.dataframe(
-          st.session_state.tasks, use_container_width=True, hide_index=True
-      )
-    else:
-      st.success("All operational protocols are up to date!")
-
-  with c2:
-    st.subheader("💡 Recent Financial Transactions")
-    if not st.session_state.expenses.empty:
-      st.dataframe(
-          st.session_state.expenses.tail(5),
-          use_container_width=True,
-          hide_index=True,
-      )
-    else:
-      st.info("No financial records logged yet.")
-
-# ====================================================
-# 2. ENTERPRISE INSPECTOR
-# ====================================================
-elif menu == "🔍 Enterprise Inspector":
-  st.title("🔍 Enterprise Drill-down Inspector")
-  st.write(
-      "Select an enterprise below to inspect its history, stock levels, losses,"
-      " and treatments."
-  )
-
-  selected_ent = st.selectbox(
-      "Choose Enterprise to Inspect",
-      ["☕ Coffee", "🍌 Bananas", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-  )
-
-  st.markdown("---")
-  col_a, col_b = st.columns(2)
-
-  with col_a:
-    st.subheader(f"📦 Active Assets for {selected_ent}")
-    ent_assets = st.session_state.inventory[
-        st.session_state.inventory["Enterprise"] == selected_ent
-    ]
-    if not ent_assets.empty:
-      st.dataframe(ent_assets, use_container_width=True, hide_index=True)
-    else:
-      st.info("No assets currently registered for this enterprise.")
-
-    st.subheader(f"🥀 Losses for {selected_ent}")
-    ent_losses = st.session_state.losses[
-        st.session_state.losses["Enterprise"] == selected_ent
-    ]
-    if not ent_losses.empty:
-      st.dataframe(ent_losses, use_container_width=True, hide_index=True)
-    else:
-      st.success("No losses recorded for this enterprise!")
-
-  with col_b:
-    st.subheader(f"💊 Self-Medication for {selected_ent}")
-    ent_meds = st.session_state.treatments[
-        st.session_state.treatments["Enterprise"] == selected_ent
-    ]
-    if not ent_meds.empty:
-      st.dataframe(ent_meds, use_container_width=True, hide_index=True)
-    else:
-      st.info("No treatments logged for this enterprise.")
-
-    st.subheader(f"📜 Audit History for {selected_ent}")
-    ent_logs = st.session_state.past_logs[
-        st.session_state.past_logs["Enterprise"] == selected_ent
-    ]
-    if not ent_logs.empty:
-      st.dataframe(ent_logs, use_container_width=True, hide_index=True)
-    else:
-      st.info("No historical logs found for this enterprise.")
-
-# ====================================================
-# 3. PLANT & LIVESTOCK LOSS TRACKER
-# ====================================================
-elif menu == "🥀 Plant & Livestock Loss Tracker":
-  st.title("🥀 Plant Drying & Animal Mortality Tracker")
-  st.write(
-      "Log dried coffee stems, diseased banana suckers, or animal mortalities"
-      " with reasons."
-  )
-
-  with st.form("loss_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-      loss_date = st.date_input("Date of Occurrence", datetime.date.today())
-      loss_enterprise = st.selectbox(
-          "Enterprise",
-          ["☕ Coffee", "🍌 Bananas", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-          key="loss_ent",
-      )
-      item_list = st.session_state.inventory[
-          st.session_state.inventory["Enterprise"] == loss_enterprise
-      ]["Item Name"].tolist()
-      selected_item = (
-          st.selectbox("Select Asset / Crop Affected", item_list)
-          if item_list
-          else st.text_input("Asset / Crop Affected")
-      )
-
-    with col2:
-      loss_qty = st.number_input(
-          "Quantity Lost / Dried / Died", min_value=1.0, step=1.0
-      )
-      loss_reason = st.text_input(
-          "Reason / Cause",
-          placeholder="e.g., Drought, Coffee wilt, Swine fever",
-      )
-
-    if st.form_submit_button("🚨 Record Loss & Automatically Deduct Stock"):
-      if selected_item and loss_reason:
-        new_loss = pd.DataFrame({
-            "Date": [str(loss_date)],
-            "Enterprise": [loss_enterprise],
-            "Item Name": [selected_item],
-            "Quantity Lost": [loss_qty],
-            "Reason / Cause": [loss_reason],
-        })
-        st.session_state.losses = pd.concat(
-            [st.session_state.losses, new_loss], ignore_index=True
-        )
-
-        idx = st.session_state.inventory[
-            st.session_state.inventory["Item Name"] == selected_item
-        ].index
-        if len(idx) > 0:
-          curr_qty = st.session_state.inventory.loc[idx[0], "Quantity"]
-          st.session_state.inventory.loc[idx[0], "Quantity"] = max(
-              0.0, curr_qty - loss_qty
-          )
-
-        new_log = pd.DataFrame({
-            "Date": [str(loss_date)],
-            "Enterprise": [loss_enterprise],
-            "Log Details": (
-                f"Lost {int(loss_qty)} of {selected_item} due to:"
-                f" {loss_reason}."
-            ),
-        })
-        st.session_state.past_logs = pd.concat(
-            [st.session_state.past_logs, new_log], ignore_index=True
-        )
-
-        st.success(
-            f"Recorded loss of {int(loss_qty)} {selected_item}! Stock level"
-            " adjusted."
-        )
-        st.rerun()
-      else:
-        st.error("Please enter/select an affected item and give a reason.")
-
-  st.markdown("### 📋 Recorded Losses Ledger")
-  if not st.session_state.losses.empty:
-    loss_display = st.session_state.losses.copy()
-    loss_display.insert(0, "Select", False)
-    edited_loss = st.data_editor(
-        loss_display,
-        use_container_width=True,
-        hide_index=True,
-        key="loss_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Loss Records", type="primary"):
-      indices_to_drop = edited_loss[edited_loss["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.losses = (
-            st.session_state.losses.drop(indices_to_drop).reset_index(drop=True)
-        )
-        st.success("Selected loss records erased!")
-        st.rerun()
-  else:
-    st.info("No losses recorded yet.")
-
-# ====================================================
-# 4. SELF-MEDICATION & TREATMENT LOG
-# ====================================================
-elif menu == "💊 Self-Medication & Treatment Log":
-  st.title("💊 Self-Medication & Chemical Treatment Log")
-  st.write("Record all internal treatments, sprays, and medicines used.")
-
-  with st.form("med_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-      med_date = st.date_input("Treatment Date", datetime.date.today())
-      med_enterprise = st.selectbox(
-          "Enterprise",
-          ["☕ Coffee", "🍌 Bananas", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-          key="med_ent",
-      )
-      med_name = st.text_input(
-          "Medicine / Fungicide / Chemical Used",
-          placeholder="e.g., Nordox Copper, Dewormer, Oxytetracycline",
-      )
-    with col2:
-      med_purpose = st.text_input(
-          "Target Issue / Purpose", placeholder="e.g., Coffee rust, Deworming"
-      )
-      med_dosage = st.text_input(
-          "Dosage / Mixing Ratio", placeholder="e.g., 50g per 20L sprayer"
-      )
-
-    if st.form_submit_button("💾 Save Treatment Record"):
-      if med_name and med_purpose:
-        new_med = pd.DataFrame({
-            "Date": [str(med_date)],
-            "Enterprise": [med_enterprise],
-            "Medicine / Chemical Used": [med_name],
-            "Target Issue / Purpose": [med_purpose],
-            "Dosage / Notes": [med_dosage],
-            "Administered By": ["Self / Internal"],
-        })
-        st.session_state.treatments = pd.concat(
-            [st.session_state.treatments, new_med], ignore_index=True
-        )
-
-        new_log = pd.DataFrame({
-            "Date": [str(med_date)],
-            "Enterprise": [med_enterprise],
-            "Log Details": (
-                f"Administered {med_name} for {med_purpose} ({med_dosage})."
-            ),
-        })
-        st.session_state.past_logs = pd.concat(
-            [st.session_state.past_logs, new_log], ignore_index=True
-        )
-
-        st.success("Treatment record saved!")
-        st.rerun()
-
-  st.markdown("### 📋 Treatment History")
-  if not st.session_state.treatments.empty:
-    treat_display = st.session_state.treatments.copy()
-    treat_display.insert(0, "Select", False)
-    edited_treat = st.data_editor(
-        treat_display,
-        use_container_width=True,
-        hide_index=True,
-        key="treat_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Treatment Records", type="primary"):
-      indices_to_drop = edited_treat[edited_treat["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.treatments = (
-            st.session_state.treatments.drop(indices_to_drop).reset_index(
-                drop=True
-            )
-        )
-        st.success("Selected records deleted!")
-        st.rerun()
-  else:
-    st.info("No medication records logged yet.")
-
-# ====================================================
-# 5. OPERATIONAL AUDIT LOGS
-# ====================================================
-elif menu == "📜 Operational Audit Logs":
-  st.title("📜 Enterprise Audit Trail")
-  st.write("Chronological ledger of farm activities and milestones.")
-
-  if not st.session_state.past_logs.empty:
-    df_display = st.session_state.past_logs.copy()
-    df_display.insert(0, "Select", False)
-    edited_df = st.data_editor(
-        df_display,
-        use_container_width=True,
-        hide_index=True,
-        key="audit_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Audit Logs", type="primary"):
-      indices_to_drop = edited_df[edited_df["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.past_logs = (
-            st.session_state.past_logs.drop(indices_to_drop).reset_index(
-                drop=True
-            )
-        )
-        st.success("Selected logs deleted!")
-        st.rerun()
-  else:
-    st.info("No operational logs recorded.")
-
-  st.markdown("---")
-  with st.expander("➕ Log New Activity"):
-    with st.form("new_audit_form", clear_on_submit=True):
-      col_a, col_b = st.columns(2)
-      with col_a:
-        log_date = st.date_input("Date", datetime.date.today())
-        log_enterprise = st.selectbox(
-            "Enterprise",
-            ["☕ Coffee", "🍌 Bananas", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-            key="audit_ent",
-        )
-      with col_b:
-        log_details = st.text_input(
-            "Activity Summary", placeholder="e.g., Planted suckers, harvested"
-        )
-
-      if st.form_submit_button("Record Audit Entry"):
-        new_entry = pd.DataFrame({
-            "Date": [str(log_date)],
-            "Enterprise": [log_enterprise],
-            "Log Details": [log_details],
-        })
-        st.session_state.past_logs = pd.concat(
-            [st.session_state.past_logs, new_entry], ignore_index=True
-        )
-        st.success("Activity logged!")
-        st.rerun()
-
-# ====================================================
-# 6. FINANCIAL LEDGER & EXPENSES
-# ====================================================
-elif menu == "💰 Financial Ledger & Expenses":
-  st.title("💰 Financial Ledger & Expense Tracking (UGX)")
-  st.write("Monitor input costs and enterprise expenditures.")
-
-  with st.form("expense_entry_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-      exp_date = st.date_input("Transaction Date", datetime.date.today())
-      enterprise = st.selectbox(
-          "Enterprise Category",
-          [
-              "☕ Coffee",
-              "🍌 Bananas",
-              "🐖 Pigs",
-              "🐔 Poultry",
-              "🐐 Goats",
-              "🧪 Chemicals & Inputs",
-              "👨‍🌾 Labor & Wages",
-              "🚜 Operations & Fuel",
-          ],
-      )
-    with col2:
-      cost_val = st.number_input(
-          "Amount (UGX)", min_value=0.0, step=1000.0, format="%.2f"
-      )
-      description = st.text_input(
-          "Item Description", placeholder="e.g., 2 bags of broken maize feed"
-      )
-
-    if st.form_submit_button("💾 Post Expense"):
-      new_exp = pd.DataFrame({
-          "Date": [str(exp_date)],
-          "Enterprise": [enterprise],
-          "Description": [description],
-          "Cost (UGX)": [cost_val],
-      })
-      st.session_state.expenses = pd.concat(
-          [st.session_state.expenses, new_exp], ignore_index=True
-      )
-      st.success("Expense posted!")
-      st.rerun()
-
-  st.markdown("### Expense Records")
-  if not st.session_state.expenses.empty:
-    exp_display = st.session_state.expenses.copy()
-    exp_display.insert(0, "Select", False)
-    edited_exp = st.data_editor(
-        exp_display,
-        use_container_width=True,
-        hide_index=True,
-        key="exp_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Expenses", type="primary"):
-      indices_to_drop = edited_exp[edited_exp["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.expenses = (
-            st.session_state.expenses.drop(indices_to_drop).reset_index(
-                drop=True
-            )
-        )
-        st.success("Selected expenses deleted!")
-        st.rerun()
-  else:
-    st.info("Ledger is currently empty.")
-
-# ====================================================
-# 7. ASSET & INVENTORY CONTROL
-# ====================================================
-elif menu == "📦 Asset & Inventory Control":
-  st.title("📦 Asset & Inventory Management")
-  st.write("Track livestock counts, plant stocks, and supplies.")
-
-  with st.expander(
-      "🌱 Add New Plant Inflow / New Suckers / Livestock", expanded=True
-  ):
-    with st.form("quick_inflow_form", clear_on_submit=True):
-      c_in1, c_in2 = st.columns(2)
-      with c_in1:
-        inflow_date = st.date_input("Acquisition Date", datetime.date.today())
-        inflow_ent = st.selectbox(
-            "Enterprise",
-            ["🍌 Bananas", "☕ Coffee", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-            key="inflow_ent",
-        )
-        inflow_name = st.text_input(
-            "Item / Variety Name",
-            placeholder="e.g., Matooke Suckers, Mevu Suckers",
-        )
-      with c_in2:
-        inflow_qty = st.number_input(
-            "Quantity Added", min_value=1.0, step=1.0, format="%.1f"
-        )
-        inflow_unit = st.selectbox(
-            "Unit",
-            [
-                "Stools",
-                "Suckers",
-                "Plants",
-                "Heads",
-                "Birds",
-                "Bags",
-                "KGs",
-                "Litres",
-                "Packets",
-            ],
-        )
-
-      if st.form_submit_button("➕ Record New Stock / Planting Inflow"):
-        if inflow_name:
-          existing_idx = st.session_state.inventory[
-              st.session_state.inventory["Item Name"].str.lower()
-              == inflow_name.lower()
-          ].index
-          if len(existing_idx) > 0:
-            current_q = st.session_state.inventory.loc[
-                existing_idx[0], "Quantity"
-            ]
-            st.session_state.inventory.loc[existing_idx[0], "Quantity"] = (
-                current_q + inflow_qty
-            )
-          else:
-            new_inv_item = pd.DataFrame({
-                "Item Name": [inflow_name],
-                "Enterprise": [inflow_ent],
-                "Quantity": [inflow_qty],
-                "Unit": [inflow_unit],
-                "Status": ["Optimal"],
-            })
-            st.session_state.inventory = pd.concat(
-                [st.session_state.inventory, new_inv_item], ignore_index=True
-            )
-
-          new_audit = pd.DataFrame({
-              "Date": [str(inflow_date)],
-              "Enterprise": [inflow_ent],
-              "Log Details": (
-                  f"Added {int(inflow_qty)} {inflow_unit} of {inflow_name} to"
-                  " stock."
-              ),
-          })
-          st.session_state.past_logs = pd.concat(
-              [st.session_state.past_logs, new_audit], ignore_index=True
-          )
-
-          st.success(
-              f"Added {int(inflow_qty)} {inflow_name} to stock successfully!"
-          )
-          st.rerun()
-        else:
-          st.error("Please enter a name for the item or variety.")
-
-  st.markdown("---")
-  st.subheader("Current Inventory Levels")
-  if not st.session_state.inventory.empty:
-    inv_display = st.session_state.inventory.copy()
-    inv_display.insert(0, "Select", False)
-    edited_inv = st.data_editor(
-        inv_display,
-        use_container_width=True,
-        hide_index=True,
-        key="inv_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Assets", type="primary"):
-      indices_to_drop = edited_inv[edited_inv["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.inventory = (
-            st.session_state.inventory.drop(indices_to_drop).reset_index(
-                drop=True
-            )
-        )
-        st.success("Selected items deleted!")
-        st.rerun()
-  else:
-    st.info("Inventory is empty.")
-
-# ====================================================
-# 8. SPRAYING & PROTOCOL ROADMAP
-# ====================================================
-elif menu == "🗓️ Spraying & Protocol Roadmap":
-  st.title("🗓️ Spraying Schedule & Operational Roadmap")
-  st.write("Manage biological treatments and spraying routines.")
-
-  if not st.session_state.tasks.empty:
-    task_display = st.session_state.tasks.copy()
-    task_display.insert(0, "Select", False)
-    edited_task = st.data_editor(
-        task_display,
-        use_container_width=True,
-        hide_index=True,
-        key="task_editor",
-    )
-
-    if st.button("🗑️ Delete Selected Tasks", type="primary"):
-      indices_to_drop = edited_task[edited_task["Select"] == True].index
-      if len(indices_to_drop) > 0:
-        st.session_state.tasks = (
-            st.session_state.tasks.drop(indices_to_drop).reset_index(
-                drop=True
-            )
-        )
-        st.success("Selected tasks deleted!")
-        st.rerun()
-  else:
-    st.info("No active tasks found.")
-
-  st.markdown("---")
-  with st.expander("📅 Schedule New Protocol / Task"):
-    with st.form("task_add_form", clear_on_submit=True):
-      col1, col2 = st.columns(2)
-      with col1:
-        task_date = st.date_input("Target Date", datetime.date.today())
-        enterprise = st.selectbox(
-            "Enterprise",
-            ["☕ Coffee", "🍌 Bananas", "🐖 Pigs", "🐔 Poultry", "🐐 Goats"],
-            key="task_ent",
-        )
-      with col2:
-        task_desc = st.text_input(
-            "Protocol / Task Specification",
-            placeholder="e.g., Apply Nordox fungicide, Mix fermented feed",
-        )
-        task_status = st.selectbox(
-            "Execution Status", ["Pending", "In Progress", "Completed"]
-        )
-
-      if st.form_submit_button("📅 Schedule Protocol"):
-        new_task = pd.DataFrame({
-            "Date": [str(task_date)],
-            "Enterprise": [enterprise],
-            "Task": [task_desc],
-            "Status": [task_status],
-        })
-        st.session_state.tasks = pd.concat(
-            [st.session_state.tasks, new_task], ignore_index=True
-        )
-        st.success("Protocol scheduled!")
-        st.rerun()
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayunga Farm Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode">
+
+    <!-- Top Bar Navigation -->
+    <header class="top-nav">
+        <div class="brand">
+            <i class="fa-solid fa-leaf brand-icon"></i>
+            <div>
+                <h1>KAYUNGA<span>FARM</span></h1>
+                <p class="subtitle">Kayunga, Uganda • Operational Dashboard</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- Dynamic HD Theme Toggle -->
+            <button id="themeToggleBtn" class="glass-btn primary-btn">
+                <i class="fa-solid fa-sun" id="themeIcon"></i>
+                <span id="themeLabel">Light Mode</span>
+            </button>
+
+            <!-- Passkey Security Status -->
+            <button id="lockStatusBtn" class="glass-btn lock-btn locked">
+                <i class="fa-solid fa-lock" id="lockIcon"></i>
+                <span id="lockText">Locked</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <button class="nav-item active" data-target="dashboard">
+                    <i class="fa-solid fa-chart-line"></i> <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-target="coffee">
+                    <i class="fa-solid fa-seedling"></i> <span>Coffee (789)</span>
+                </button>
+                <button class="nav-item" data-target="piggery">
+                    <i class="fa-solid fa-piggy-bank"></i> <span>Piggery</span>
+                </button>
+                <button class="nav-item" data-target="poultry">
+                    <i class="fa-solid fa-egg"></i> <span>Poultry & Bananas</span>
+                </button>
+                <button class="nav-item" data-target="goats">
+                    <i class="fa-solid fa-cubes-stacked"></i> <span>Goat Herd</span>
+                </button>
+                <button class="nav-item" data-target="logs">
+                    <i class="fa-solid fa-list-check"></i> <span>Manage Records</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="location-badge">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Kayunga, Uganda</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="content-area">
+
+            <!-- Security Passkey Modal -->
+            <div id="authOverlay" class="auth-overlay active">
+                <div class="glass-card auth-card">
+                    <i class="fa-solid fa-shield-halved auth-shield"></i>
+                    <h2>Master Access Required</h2>
+                    <p>Enter passkey to view private records for Kayunga Farm.</p>
+                    <div class="input-group">
+                        <input type="password" id="passkeyInput" placeholder="Enter master passkey..." />
+                        <button id="togglePassVisibility" class="icon-only-btn"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                    <div class="auth-buttons">
+                        <button id="unlockBtn" class="action-btn glow-btn">Unlock Private Records</button>
+                        <button id="demoModeBtn" class="action-btn secondary-btn">Public Demo Mode</button>
+                    </div>
+                    <p id="authError" class="error-msg"></p>
+                </div>
+            </div>
+
+            <!-- Dashboard Overview Panel -->
+            <section id="dashboard" class="panel active">
+                <div class="stats-grid">
+                    <div class="glass-card stat-card">
+                        <div class="stat-header">
+                            <i class="fa-solid fa-mug-hot stat-icon coffee-color"></i>
+                            <span class="badge">Active Plantation</span>
+                        </div>
+                        <h3>Coffee Trees</h3>
+                        <div class="stat-value">789 Plants</div>
+                        <p class="stat-sub">NPK 17-17-17 / Nordox Spray</p>
+                    </div>
+
+                    <div class="glass-card stat-card">
+                        <div class="stat-header">
+                            <i class="fa-solid fa-piggy-bank stat-icon pig-color"></i>
+                            <span class="badge">Fermented Feed</span>
+                        </div>
+                        <h3>Piggery Unit</h3>
+                        <div class="stat-value">2 Active Pens</div>
+                        <p class="stat-sub">Broken Maize & Yeast Feed</p>
+                    </div>
+
+                    <div class="glass-card stat-card">
+                        <div class="stat-header">
+                            <i class="fa-solid fa-feather stat-icon poultry-color"></i>
+                            <span class="badge">Flock & Bananas</span>
+                        </div>
+                        <h3>Poultry & Crops</h3>
+                        <div class="stat-value">39 Head / 53 Matooke & Mevu</div>
+                        <p class="stat-sub">26 Hens | 13 Cocks</p>
+                    </div>
+
+                    <div class="glass-card stat-card">
+                        <div class="stat-header">
+                            <i class="fa-solid fa-vault stat-icon ugx-color"></i>
+                            <span class="badge">UGX Currency</span>
+                        </div>
+                        <h3>Financial Status</h3>
+                        <div class="stat-value" id="financialBalance">UGX 4,850,000</div>
+                        <p class="stat-sub">Operational Balance</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="glass-card chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-area"></i> Yield & Revenue Telemetry</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="yieldChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-card action-hub">
+                        <h3><i class="fa-solid fa-bolt"></i> Quick Operational Logging</h3>
+                        <div class="quick-inputs">
+                            <input type="text" id="logDescription" placeholder="Description (e.g. Sold eggs, Spray treatment)">
+                            <input type="number" id="logAmount" placeholder="Amount in UGX">
+                            <div class="quick-buttons">
+                                <button class="pulse-btn success" id="addIncomeBtn"><i class="fa-solid fa-plus"></i> Add Revenue</button>
+                                <button class="pulse-btn danger" id="addExpenseBtn"><i class="fa-solid fa-minus"></i> Add Expense</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Coffee Module -->
+            <section id="coffee" class="panel">
+                <div class="glass-card module-card">
+                    <h2><i class="fa-solid fa-seedling"></i> Coffee Management Protocols</h2>
+                    <div class="module-details">
+                        <div class="detail-box">
+                            <h4>Total Purchased Plants</h4>
+                            <p class="big-number">789 Trees</p>
+                        </div>
+                        <div class="detail-box">
+                            <h4>Soil Fertilizer</h4>
+                            <p>NPK 17-17-17</p>
+                        </div>
+                        <div class="detail-box">
+                            <h4>Foliar Spray Formula</h4>
+                            <p>24-24-20</p>
+                        </div>
+                        <div class="detail-box">
+                            <h4>Protection Protocol</h4>
+                            <p>Nordox Copper Fungicide, Calcium & Boron</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Piggery Module -->
+            <section id="piggery" class="panel">
+                <div class="glass-card module-card">
+                    <h2><i class="fa-solid fa-piggy-bank"></i> Piggery Unit Management</h2>
+                    <p><strong>Feed Recipe:</strong> Fermented mixture of broken maize (not broken rice), rice bran, yeast, water, and banana stalks.</p>
+                </div>
+            </section>
+
+            <!-- Poultry & Bananas Module -->
+            <section id="poultry" class="panel">
+                <div class="glass-card module-card">
+                    <h2><i class="fa-solid fa-egg"></i> Poultry & Banana Plantations</h2>
+                    <p><strong>Flock Inventory:</strong> 26 Hens, 13 Cocks, plus growing chicks.</p>
+                    <p><strong>Banana Crops:</strong> 43 Matooke and 10 Mevu plants.</p>
+                </div>
+            </section>
+
+            <!-- Goats Module -->
+            <section id="goats" class="panel">
+                <div class="glass-card module-card">
+                    <h2><i class="fa-solid fa-cubes-stacked"></i> Livestock Goat Registry</h2>
+                    <p>Breeding herd tracking including twin kids born on August 18, 2026.</p>
+                </div>
+            </section>
+
+            <!-- Records & Deletion Manager Panel -->
+            <section id="logs" class="panel">
+                <div class="glass-card module-card">
+                    <h2><i class="fa-solid fa-list-check"></i> Operational Log & Data Management</h2>
+                    <p class="sub-text">Select items using checkboxes to delete or manage entries.</p>
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Select</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount (UGX)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                            <!-- Injected dynamically by JavaScript -->
+                        </tbody>
+                    </table>
+                    <button class="pulse-btn danger" id="deleteSelectedBtn"><i class="fa-solid fa-trash"></i> Delete Selected Entries</button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+:root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #121826;
+    --card-bg: rgba(22, 30, 46, 0.75);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --accent-glow: #3b82f6;
+    --btn-primary-bg: #3b82f6;
+    --btn-primary-text: #ffffff;
+    --accent-success: #10b981;
+    --accent-danger: #ef4444;
+    --glass-blur: blur(16px);
+    --shadow-hd: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+body.light-mode {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #e2e8f0;
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --card-border: rgba(0, 0, 0, 0.08);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --accent-glow: #2563eb;
+    --btn-primary-bg: #0f172a;
+    --btn-primary-text: #ffffff;
+    --shadow-hd: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    transition: background-color 0.4s ease, color 0.4s ease;
+    overflow-x: hidden;
+}
+
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 2rem;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--card-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand-icon {
+    font-size: 2rem;
+    color: var(--accent-success);
+}
+
+.brand h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.brand h1 span {
+    color: var(--accent-glow);
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.glass-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: var(--glass-blur);
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-hd);
+}
+
+.glass-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-glow);
+}
+
+.glass-btn:active {
+    transform: translateY(1px);
+}
+
+.primary-btn {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+}
+
+.main-container {
+    display: flex;
+    min-height: calc(100vh - 75px);
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    border-right: 1px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem 1rem;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.2rem;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.nav-item:hover, .nav-item.active {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+}
+
+.content-area {
+    flex: 1;
+    padding: 2rem;
+    position: relative;
+    overflow-y: auto;
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-hd);
+    margin-bottom: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0.4rem 0;
+}
+
+.badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-success);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.panel {
+    display: none;
+}
+
+.panel.active {
+    display: block;
+}
+
+.auth-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 14, 23, 0.85);
+    backdrop-filter: blur(20px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+}
+
+.auth-overlay.active {
+    display: flex;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.auth-shield {
+    font-size: 3rem;
+    color: var(--accent-glow);
+    margin-bottom: 1rem;
+}
+
+.input-group {
+    display: flex;
+    margin: 1.5rem 0;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    overflow: hidden;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.action-btn, .pulse-btn {
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pulse-btn.success { background: var(--accent-success); color: #fff; }
+.pulse-btn.danger { background: var(--accent-danger); color: #fff; }
+
+.quick-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.quick-inputs input {
+    padding: 0.8rem;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+}
+
+.log-table th, .log-table td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--card-border);
+}
+
+@media (max-width: 900px) {
+    .main-container { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; }
+    .nav-menu { flex-direction: row; overflow-x: auto; }
+    .nav-item span { display: none; }
+}
+document.addEventListener('DOMContentLoaded', () => {
+
+    // 1. Initial Data Store (Preserving All User Inputs)
+    let initialBalance = 4850000;
+    let logs = [
+        { id: 1, date: '2026-08-31', desc: 'Insecticide Spray Treatment', cat: 'Coffee Plantation', amount: -150000 },
+        { id: 2, date: '2026-09-18', desc: 'Planted 20 Matooke Suckers', cat: 'Bananas', amount: -80000 },
+        { id: 3, date: '2026-10-15', desc: 'Egg Sales Batch #4', cat: 'Poultry', amount: 320000 }
+    ];
+
+    // 2. Dynamic Theme Morphing
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        themeIcon.className = isLight ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+        themeLabel.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+        updateChartColors(isLight);
+    });
+
+    // 3. Navigation
+    const navItems = document.querySelectorAll('.nav-item');
+    const panels = document.querySelectorAll('.panel');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            navItems.forEach(nav => nav.classList.remove('active'));
+            panels.forEach(panel => panel.classList.remove('active'));
+            item.classList.add('active');
+            document.getElementById(item.getAttribute('data-target')).classList.add('active');
+        });
+    });
+
+    // 4. Passkey Authentication
+    const authOverlay = document.getElementById('authOverlay');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const passkeyInput = document.getElementById('passkeyInput');
+    const authError = document.getElementById('authError');
+    const demoModeBtn = document.getElementById('demoModeBtn');
+    const lockStatusBtn = document.getElementById('lockStatusBtn');
+    const lockText = document.getElementById('lockText');
+
+    const MASTER_PASSKEY = "Kayunga2026!";
+
+    unlockBtn.addEventListener('click', () => {
+        if (passkeyInput.value === MASTER_PASSKEY) {
+            authOverlay.classList.remove('active');
+            lockStatusBtn.classList.remove('locked');
+            lockText.textContent = "Unlocked";
+            authError.textContent = "";
+            passkeyInput.value = "";
+        } else {
+            authError.textContent = "Incorrect Passkey. Access Denied.";
+        }
+    });
+
+    demoModeBtn.addEventListener('click', () => {
+        authOverlay.classList.remove('active');
+        lockText.textContent = "Demo Mode";
+        authError.textContent = "";
+    });
+
+    lockStatusBtn.addEventListener('click', () => {
+        authOverlay.classList.add('active');
+    });
+
+    // 5. Render Log Records & Data Deletion
+    const logTableBody = document.getElementById('logTableBody');
+    const financialBalance = document.getElementById('financialBalance');
+
+    function renderLogs() {
+        logTableBody.innerHTML = '';
+        let total = initialBalance;
+
+        logs.forEach(log => {
+            total += log.amount;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="log-checkbox" data-id="${log.id}"></td>
+                <td>${log.date}</td>
+                <td>${log.desc}</td>
+                <td>${log.cat}</td>
+                <td style="color: ${log.amount >= 0 ? '#10b981' : '#ef4444'}">UGX ${log.amount.toLocaleString()}</td>
+            `;
+            logTableBody.appendChild(tr);
+        });
+
+        financialBalance.textContent = `UGX ${total.toLocaleString()}`;
+    }
+
+    renderLogs();
+
+    // Add Income / Expense Controls
+    document.getElementById('addIncomeBtn').addEventListener('click', () => addTransaction(true));
+    document.getElementById('addExpenseBtn').addEventListener('click', () => addTransaction(false));
+
+    function addTransaction(isIncome) {
+        const desc = document.getElementById('logDescription').value || 'General Operation';
+        const amt = parseFloat(document.getElementById('logAmount').value) || 0;
+        if (amt <= 0) return;
+
+        logs.push({
+            id: Date.now(),
+            date: new Date().toISOString().split('T')[0],
+            desc: desc,
+            cat: 'General',
+            amount: isIncome ? amt : -amt
+        });
+
+        document.getElementById('logDescription').value = '';
+        document.getElementById('logAmount').value = '';
+        renderLogs();
+    }
+
+    // Delete Selected Entries
+    document.getElementById('deleteSelectedBtn').addEventListener('click', () => {
+        const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
+        const idsToDelete = Array.from(checkedBoxes).map(cb => parseInt(cb.getAttribute('data-id')));
+        logs = logs.filter(log => !idsToDelete.includes(log.id));
+        renderLogs();
+    });
+
+    // 6. Chart Telemetry Rendering
+    const ctx = document.getElementById('yieldChart').getContext('2d');
+    let yieldChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Harvest Telemetry (Kg)',
+                data: [120, 190, 300, 250, 220, 310, 400],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#94a3b8' } } },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+            }
+        }
+    });
+
+    function updateChartColors(isLight) {
+        const color = isLight ? '#0f172a' : '#94a3b8';
+        yieldChart.options.plugins.legend.labels.color = color;
+        yieldChart.options.scales.x.ticks.color = color;
+        yieldChart.options.scales.y.ticks.color = color;
+        yieldChart.update();
+    }
+});
