@@ -42,28 +42,142 @@ st.markdown("""
         font-weight: 600;
         color: #1e293b;
     }
+    /* Premium interaction polish */
+    .stApp {
+        background: radial-gradient(circle at 12% 0%, rgba(16,185,129,.08), transparent 28%),
+                    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    h1, h2, h3 { letter-spacing: -0.035em; }
+    div.stButton > button {
+        border-radius: 12px;
+        border: 1px solid rgba(16,185,129,.28);
+        font-weight: 650;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(16,185,129,.16);
+    }
+    div[data-testid="stMetric"] {
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 26px rgba(15,23,42,.09);
+    }
+    .save-pill {
+        display:inline-block; padding:6px 11px; border-radius:999px;
+        background:#dcfce7; color:#166534; font-size:12px; font-weight:700;
+        border:1px solid #bbf7d0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- MASTER ADMIN PASSKEY ---
 ADMIN_PASSKEY = "Kayunga2026!"
 
-# --- PERSISTENCE FILE PATHS ---
-FILE_INV = "farm_inventory.csv"
-FILE_LOGS = "farm_logs.csv"
-FILE_EXP = "farm_expenses.csv"
-FILE_SALES = "farm_sales.csv"
-FILE_TASKS = "farm_tasks.csv"
-FILE_LOSSES = "farm_losses.csv"
-FILE_TREATMENTS = "farm_treatments.csv"
-FILE_EMPLOYEES = "farm_employees.csv"
+# --- DURABLE SQLITE STORAGE ---
+# Set AGRIMETRICS_DATA_DIR to a persistent mounted directory in production.
+# Example: /var/lib/agrimetrics (do not use an ephemeral deployment folder).
+import sqlite3
+import io
+import tempfile
+import shutil
 
-# --- SESSION STATE INITIALIZATION WITH PERSISTENCE ---
+DATA_DIR = os.environ.get("AGRIMETRICS_DATA_DIR", os.path.abspath("agrimetrics_data"))
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "agrimetrics_pro.db")
+
+TABLES = {
+    "inventory": "inventory",
+    "past_logs": "farm_logs",
+    "expenses": "expenses",
+    "sales": "sales",
+    "tasks": "tasks",
+    "losses": "losses",
+    "treatments": "treatments",
+    "employees": "employees",
+}
+EMPTY_DATA = {
+    "inventory": ["Item Name", "Enterprise", "Quantity", "Unit", "Status"],
+    "past_logs": ["Date", "Enterprise", "Log Details"],
+    "expenses": ["Date", "Enterprise", "Description", "Cost (UGX)"],
+    "sales": ["Date", "Enterprise", "Item / Produce Sold", "Quantity Sold", "Unit", "Unit Price (UGX)", "Total Revenue (UGX)", "Customer / Buyer"],
+    "tasks": ["Date", "Enterprise", "Task", "Status"],
+    "losses": ["Date", "Enterprise", "Item Name", "Quantity Lost", "Reason / Cause"],
+    "treatments": ["Date", "Enterprise", "Medicine / Chemical Used", "Target Issue / Purpose", "Dosage / Notes", "Administered By"],
+    "employees": ["Employee Name", "Role", "Daily Wage (UGX)", "Status"],
+}
+
+def db_connect():
+    conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=FULL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+def db_has_data():
+    with db_connect() as conn:
+        tables = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )}
+        return "inventory" in tables and conn.execute(
+            "SELECT COUNT(*) FROM inventory"
+        ).fetchone()[0] > 0
+
+def load_database_into_session():
+    with db_connect() as conn:
+        for state_key, table in TABLES.items():
+            try:
+                df = pd.read_sql_query(f'SELECT * FROM "{table}"', conn)
+            except (sqlite3.OperationalError, pd.errors.DatabaseError):
+                df = pd.DataFrame(columns=EMPTY_DATA[state_key])
+            st.session_state[state_key] = df
+
+def save_all_data():
+    """Persist live farm datasets in one SQLite transaction; demo edits stay isolated."""
+    if st.session_state.get("demo_active", not st.session_state.get("logged_in", False)) and not st.session_state.get("_seed_write", False):
+        st.session_state.last_saved = "Demo session · not written to live database"
+        return
+    try:
+        with db_connect() as conn:
+            for state_key, table in TABLES.items():
+                df = st.session_state.get(state_key, pd.DataFrame(columns=EMPTY_DATA[state_key]))
+                df.to_sql(table, conn, if_exists="replace", index=False)
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS app_metadata "
+                "(key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO app_metadata(key, value) VALUES (?, ?)",
+                ("last_saved_utc", datetime.datetime.now(datetime.timezone.utc).isoformat()),
+            )
+        st.session_state.last_saved = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.save_error = None
+    except Exception as exc:
+        st.session_state.save_error = str(exc)
+        raise
+
+def make_database_backup():
+    """Create a consistent SQLite snapshot, including WAL changes."""
+    with db_connect() as source:
+        target = sqlite3.connect(":memory:")
+        source.backup(target)
+        data = target.serialize()
+        target.close()
+    return data
+
+# --- SESSION STATE INITIALIZATION ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
+if "demo_active" not in st.session_state:
+    st.session_state.demo_active = True
 if "current_page" not in st.session_state:
     st.session_state.current_page = "📈 Executive Dashboard"
+if "last_saved" not in st.session_state:
+    st.session_state.last_saved = None
+if "save_error" not in st.session_state:
+    st.session_state.save_error = None
 
 def get_default_real_data():
     inv = pd.DataFrame([
@@ -88,15 +202,15 @@ def get_default_real_data():
         {"Date": "2026-08-31", "Enterprise": "🫘 Coffee", "Log Details": "Applied insecticide treatment for leaf-eating pests."},
         {"Date": "2026-09-18", "Enterprise": "🍌 Bananas", "Log Details": "Planted 20 additional matooke banana suckers."},
     ])
-    exp = pd.DataFrame(columns=["Date", "Enterprise", "Description", "Cost (UGX)"])
-    sales = pd.DataFrame(columns=["Date", "Enterprise", "Item / Produce Sold", "Quantity Sold", "Unit", "Unit Price (UGX)", "Total Revenue (UGX)", "Customer / Buyer"])
+    exp = pd.DataFrame(columns=EMPTY_DATA["expenses"])
+    sales = pd.DataFrame(columns=EMPTY_DATA["sales"])
     tasks = pd.DataFrame([
         {"Date": "2026-10-25", "Enterprise": "🫘 Coffee", "Task": "Scheduled Nordox fungicide spray & canopy check", "Status": "Pending"},
         {"Date": "2026-10-28", "Enterprise": "🐖 Pigs", "Task": "Batch fermented feed mix (Broken maize, rice bran, yeast, banana stalks)", "Status": "In Progress"},
         {"Date": "2026-11-02", "Enterprise": "🍌 Bananas", "Task": "Desuckering and organic mulching for Matooke & Mevu blocks", "Status": "Pending"},
     ])
-    losses = pd.DataFrame(columns=["Date", "Enterprise", "Item Name", "Quantity Lost", "Reason / Cause"])
-    treatments = pd.DataFrame(columns=["Date", "Enterprise", "Medicine / Chemical Used", "Target Issue / Purpose", "Dosage / Notes", "Administered By"])
+    losses = pd.DataFrame(columns=EMPTY_DATA["losses"])
+    treatments = pd.DataFrame(columns=EMPTY_DATA["treatments"])
     employees = pd.DataFrame([
         {"Employee Name": "Farm Hand 1", "Role": "General Worker", "Daily Wage (UGX)": 15000.0, "Status": "Active"},
         {"Employee Name": "Farm Supervisor", "Role": "Operations Manager", "Daily Wage (UGX)": 30000.0, "Status": "Active"}
@@ -109,47 +223,53 @@ def get_demo_data():
         {"Item Name": "Demo Bananas", "Enterprise": "🍌 Bananas", "Quantity": 20.0, "Unit": "Stools", "Status": "Demo"},
     ])
     logs = pd.DataFrame([{"Date": str(datetime.date.today()), "Enterprise": "🫘 Coffee", "Log Details": "Demo Activity: Applied sample organic fertilizer."}])
-    exp = pd.DataFrame(columns=["Date", "Enterprise", "Description", "Cost (UGX)"])
-    sales = pd.DataFrame(columns=["Date", "Enterprise", "Item / Produce Sold", "Quantity Sold", "Unit", "Unit Price (UGX)", "Total Revenue (UGX)", "Customer / Buyer"])
+    exp = pd.DataFrame(columns=EMPTY_DATA["expenses"])
+    sales = pd.DataFrame(columns=EMPTY_DATA["sales"])
     tasks = pd.DataFrame([{"Date": str(datetime.date.today()), "Enterprise": "🫘 Coffee", "Task": "Sample Scheduled Spraying Task", "Status": "Pending"}])
-    losses = pd.DataFrame(columns=["Date", "Enterprise", "Item Name", "Quantity Lost", "Reason / Cause"])
-    treatments = pd.DataFrame(columns=["Date", "Enterprise", "Medicine / Chemical Used", "Target Issue / Purpose", "Dosage / Notes", "Administered By"])
-    employees = pd.DataFrame(columns=["Employee Name", "Role", "Daily Wage (UGX)", "Status"])
+    losses = pd.DataFrame(columns=EMPTY_DATA["losses"])
+    treatments = pd.DataFrame(columns=EMPTY_DATA["treatments"])
+    employees = pd.DataFrame(columns=EMPTY_DATA["employees"])
     return inv, logs, exp, sales, tasks, losses, treatments, employees
 
-# Load or initialize session state with CSV persistence
-if "inventory" not in st.session_state:
-    if os.path.exists(FILE_INV):
-        st.session_state.inventory = pd.read_csv(FILE_INV)
-        st.session_state.past_logs = pd.read_csv(FILE_LOGS) if os.path.exists(FILE_LOGS) else pd.DataFrame(columns=["Date", "Enterprise", "Log Details"])
-        st.session_state.expenses = pd.read_csv(FILE_EXP) if os.path.exists(FILE_EXP) else pd.DataFrame(columns=["Date", "Enterprise", "Description", "Cost (UGX)"])
-        st.session_state.sales = pd.read_csv(FILE_SALES) if os.path.exists(FILE_SALES) else pd.DataFrame(columns=["Date", "Enterprise", "Item / Produce Sold", "Quantity Sold", "Unit", "Unit Price (UGX)", "Total Revenue (UGX)", "Customer / Buyer"])
-        st.session_state.tasks = pd.read_csv(FILE_TASKS) if os.path.exists(FILE_TASKS) else pd.DataFrame(columns=["Date", "Enterprise", "Task", "Status"])
-        st.session_state.losses = pd.read_csv(FILE_LOSSES) if os.path.exists(FILE_LOSSES) else pd.DataFrame(columns=["Date", "Enterprise", "Item Name", "Quantity Lost", "Reason / Cause"])
-        st.session_state.treatments = pd.read_csv(FILE_TREATMENTS) if os.path.exists(FILE_TREATMENTS) else pd.DataFrame(columns=["Date", "Enterprise", "Medicine / Chemical Used", "Target Issue / Purpose", "Dosage / Notes", "Administered By"])
-        st.session_state.employees = pd.read_csv(FILE_EMPLOYEES) if os.path.exists(FILE_EMPLOYEES) else pd.DataFrame(columns=["Employee Name", "Role", "Daily Wage (UGX)", "Status"])
-        st.session_state.logged_in = True
+# Existing CSV data is imported once only if the SQLite store is empty.
+if not db_has_data():
+    legacy_csvs = {
+        "inventory": "farm_inventory.csv", "past_logs": "farm_logs.csv",
+        "expenses": "farm_expenses.csv", "sales": "farm_sales.csv",
+        "tasks": "farm_tasks.csv", "losses": "farm_losses.csv",
+        "treatments": "farm_treatments.csv", "employees": "farm_employees.csv",
+    }
+    legacy_found = any(os.path.exists(path) for path in legacy_csvs.values())
+    if legacy_found:
+        for key, path in legacy_csvs.items():
+            if os.path.exists(path):
+                try:
+                    st.session_state[key] = pd.read_csv(path)
+                except Exception:
+                    st.session_state[key] = pd.DataFrame(columns=EMPTY_DATA[key])
+            else:
+                st.session_state[key] = pd.DataFrame(columns=EMPTY_DATA[key])
+        st.session_state["_seed_write"] = True
+        save_all_data()
+        st.session_state["_seed_write"] = False
     else:
-        (
-            st.session_state.inventory,
-            st.session_state.past_logs,
-            st.session_state.expenses,
-            st.session_state.sales,
-            st.session_state.tasks,
-            st.session_state.losses,
-            st.session_state.treatments,
-            st.session_state.employees,
-        ) = get_demo_data()
+        # First-run store: seed with farm's initial live records once.
+        initial = get_default_real_data()
+        for key, df in zip(TABLES.keys(), initial):
+            st.session_state[key] = df
+        st.session_state["_seed_write"] = True
+        save_all_data()
+        st.session_state["_seed_write"] = False
+        # The public, unauthenticated view remains a separate demo dataset.
+        if not st.session_state.logged_in:
+            demo = get_demo_data()
+            for key, df in zip(TABLES.keys(), demo):
+                st.session_state[key] = df
 
-def save_all_data():
-    st.session_state.inventory.to_csv(FILE_INV, index=False)
-    st.session_state.past_logs.to_csv(FILE_LOGS, index=False)
-    st.session_state.expenses.to_csv(FILE_EXP, index=False)
-    st.session_state.sales.to_csv(FILE_SALES, index=False)
-    st.session_state.tasks.to_csv(FILE_TASKS, index=False)
-    st.session_state.losses.to_csv(FILE_LOSSES, index=False)
-    st.session_state.treatments.to_csv(FILE_TREATMENTS, index=False)
-    st.session_state.employees.to_csv(FILE_EMPLOYEES, index=False)
+if "inventory" not in st.session_state:
+    demo = get_demo_data()
+    for key, df in zip(TABLES.keys(), demo):
+        st.session_state[key] = df
 
 # --- SIDEBAR LOG-IN & NAVIGATION ---
 st.sidebar.image(
@@ -167,18 +287,10 @@ if not st.session_state.logged_in:
     if st.sidebar.button("Log In", use_container_width=True):
         if passkey_input == ADMIN_PASSKEY:
             st.session_state.logged_in = True
-            (
-                st.session_state.inventory,
-                st.session_state.past_logs,
-                st.session_state.expenses,
-                st.session_state.sales,
-                st.session_state.tasks,
-                st.session_state.losses,
-                st.session_state.treatments,
-                st.session_state.employees,
-            ) = get_default_real_data()
-            save_all_data()
-            st.sidebar.success("Welcome back! Live Farm Loaded.")
+            st.session_state.demo_active = False
+            # Login must LOAD saved records, never reset them to seed/demo values.
+            load_database_into_session()
+            st.sidebar.success("Welcome back! Your saved farm records are loaded.")
             st.rerun()
         else:
             st.sidebar.error("Invalid Passkey.")
@@ -186,6 +298,7 @@ else:
     st.sidebar.success("🟢 Connected to Live Kayunga Farm")
     if st.sidebar.button("Switch to Demo Mode", use_container_width=True):
         st.session_state.logged_in = False
+        st.session_state.demo_active = True
         (
             st.session_state.inventory,
             st.session_state.past_logs,
@@ -199,6 +312,63 @@ else:
         st.rerun()
 
 st.sidebar.markdown("---")
+
+# Visible save status, consistent database backup, and restore controls.
+if st.session_state.get("save_error"):
+    st.sidebar.error("Save issue: " + str(st.session_state.save_error))
+elif st.session_state.get("last_saved"):
+    st.sidebar.markdown(
+        f'<span class="save-pill">✓ Saved · {st.session_state.last_saved}</span>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.sidebar.caption("💾 Data store ready · SQLite")
+
+with st.sidebar.expander("🛡️ Backup & Recovery", expanded=False):
+    st.caption("Download a consistent snapshot before deploying an upgrade.")
+    try:
+        backup_bytes = make_database_backup()
+        st.download_button(
+            "⬇️ Download Full Farm Backup",
+            data=backup_bytes,
+            file_name=f"agrimetrics_backup_{datetime.date.today().isoformat()}.db",
+            mime="application/x-sqlite3",
+            use_container_width=True,
+        )
+    except Exception as backup_exc:
+        st.error(f"Backup could not be prepared: {backup_exc}")
+
+    uploaded_backup = st.file_uploader(
+        "Restore from a .db backup",
+        type=["db", "sqlite", "sqlite3"],
+        key="database_restore_upload",
+    )
+    if uploaded_backup is not None and st.button(
+        "⚠️ Restore Backup (replace current records)", use_container_width=True
+    ):
+        try:
+            candidate = sqlite3.connect(":memory:")
+            candidate.deserialize(uploaded_backup.getvalue())
+            required = set(TABLES.values())
+            available = {row[0] for row in candidate.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )}
+            if not required.issubset(available):
+                raise ValueError("This file does not contain all AgriMetrics data tables.")
+            candidate.close()
+            temp_path = DB_PATH + ".restore"
+            with open(temp_path, "wb") as temp_file:
+                temp_file.write(uploaded_backup.getvalue())
+            # Keep a safety snapshot of the current database before replacement.
+            shutil.copy2(DB_PATH, DB_PATH + ".before_restore.bak")
+            os.replace(temp_path, DB_PATH)
+            load_database_into_session()
+            st.session_state.logged_in = True
+            st.session_state.demo_active = False
+            st.success("Backup restored successfully.")
+            st.rerun()
+        except Exception as restore_exc:
+            st.error(f"Restore failed: {restore_exc}")
 
 nav_options = [
     "📈 Executive Dashboard",
