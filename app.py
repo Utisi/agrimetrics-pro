@@ -402,11 +402,11 @@ if not st.session_state.logged_in:
         "🔒 **To access your live farm data, enter your owner passkey in the sidebar.**"
     )
 
-# Keep the sidebar navigation widget and the active page in sync.
+# Streamlit button callbacks run before the next script pass, so updating
+# the selectbox key here avoids a "cannot modify widget state" exception.
 def navigate_to(page_name: str) -> None:
     st.session_state.current_page = page_name
     st.session_state.nav_selectbox = page_name
-    st.rerun()
 
 
 # ====================================================
@@ -453,28 +453,23 @@ if menu == "📈 Executive Dashboard":
 
     with col1:
         st.metric("Total Expenses", f"UGX {total_spent:,.0f}")
-        if st.button("👉 View Ledger", key="dash_exp", use_container_width=True):
-            navigate_to("💰 Financial Ledger & Expenses")
+        st.button("👉 View Ledger", key="dash_exp", use_container_width=True, on_click=navigate_to, args=("💰 Financial Ledger & Expenses",))
 
     with col2:
         st.metric("Coffee Stems Active", f"{coffee_count} Plants")
-        if st.button("👉 View Coffee Block", key="dash_coffee", use_container_width=True):
-            navigate_to("🫘 Coffee Plantation Block")
+        st.button("👉 View Coffee Block", key="dash_coffee", use_container_width=True, on_click=navigate_to, args=("🫘 Coffee Plantation Block",))
 
     with col3:
         st.metric("Goats Stock", f"{goats_count} Heads")
-        if st.button("👉 View Goats Block", key="dash_goats", use_container_width=True):
-            navigate_to("🐐 Goats Enterprise")
+        st.button("👉 View Goats Block", key="dash_goats", use_container_width=True, on_click=navigate_to, args=("🐐 Goats Enterprise",))
 
     with col4:
         st.metric("Pigs Stock", f"{pigs_count} Heads")
-        if st.button("👉 View Pigs Block", key="dash_pigs", use_container_width=True):
-            navigate_to("🐖 Pigs Enterprise")
+        st.button("👉 View Pigs Block", key="dash_pigs", use_container_width=True, on_click=navigate_to, args=("🐖 Pigs Enterprise",))
 
     with col5:
         st.metric("Active Staff", f"{emp_count} Workers")
-        if st.button("👉 View HR & Payroll", key="dash_hr", use_container_width=True):
-            navigate_to("👨‍🌾 HR & Payroll Management")
+        st.button("👉 View HR & Payroll", key="dash_hr", use_container_width=True, on_click=navigate_to, args=("👨‍🌾 HR & Payroll Management",))
 
     st.markdown("---")
 
