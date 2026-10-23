@@ -402,6 +402,13 @@ if not st.session_state.logged_in:
         "🔒 **To access your live farm data, enter your owner passkey in the sidebar.**"
     )
 
+# Keep the sidebar navigation widget and the active page in sync.
+def navigate_to(page_name: str) -> None:
+    st.session_state.current_page = page_name
+    st.session_state.nav_selectbox = page_name
+    st.rerun()
+
+
 # ====================================================
 # 1. EXECUTIVE DASHBOARD (INTERACTIVE NAVIGATION)
 # ====================================================
@@ -447,32 +454,27 @@ if menu == "📈 Executive Dashboard":
     with col1:
         st.metric("Total Expenses", f"UGX {total_spent:,.0f}")
         if st.button("👉 View Ledger", key="dash_exp", use_container_width=True):
-            st.session_state.current_page = "💰 Financial Ledger & Expenses"
-            st.rerun()
+            navigate_to("💰 Financial Ledger & Expenses")
 
     with col2:
         st.metric("Coffee Stems Active", f"{coffee_count} Plants")
         if st.button("👉 View Coffee Block", key="dash_coffee", use_container_width=True):
-            st.session_state.current_page = "🫘 Coffee Plantation Block"
-            st.rerun()
+            navigate_to("🫘 Coffee Plantation Block")
 
     with col3:
         st.metric("Goats Stock", f"{goats_count} Heads")
         if st.button("👉 View Goats Block", key="dash_goats", use_container_width=True):
-            st.session_state.current_page = "🐐 Goats Enterprise"
-            st.rerun()
+            navigate_to("🐐 Goats Enterprise")
 
     with col4:
         st.metric("Pigs Stock", f"{pigs_count} Heads")
         if st.button("👉 View Pigs Block", key="dash_pigs", use_container_width=True):
-            st.session_state.current_page = "🐖 Pigs Enterprise"
-            st.rerun()
+            navigate_to("🐖 Pigs Enterprise")
 
     with col5:
         st.metric("Active Staff", f"{emp_count} Workers")
         if st.button("👉 View HR & Payroll", key="dash_hr", use_container_width=True):
-            st.session_state.current_page = "👨‍🌾 HR & Payroll Management"
-            st.rerun()
+            navigate_to("👨‍🌾 HR & Payroll Management")
 
     st.markdown("---")
 
